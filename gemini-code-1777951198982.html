@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Grammar Quest - Syntaxia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8 flex flex-col items-center">
+
+    <div id="game-container" class="w-full max-w-2xl">
+        <div class="bg-slate-800 rounded-xl p-4 mb-6 flex justify-between items-center shadow-lg border border-slate-700">
+            <div class="flex items-center gap-2">
+                <i data-lucide="book-open" class="text-blue-400"></i>
+                <span id="level-display" class="font-bold">Level 1</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <i data-lucide="trophy" class="text-yellow-400"></i>
+                <span id="score-display" class="font-bold">0 Markah</span>
+            </div>
+            <div id="hearts-container" class="flex items-center gap-1">
+                </div>
+        </div>
+
+        <div id="main-card" class="bg-slate-800 rounded-2xl overflow-hidden shadow-2xl border border-slate-700 flex flex-col min-h-[450px]">
+            </div>
+
+        <p class="mt-8 text-slate-500 text-xs text-center max-w-md mx-auto">
+            Objektif: Jawab semua soalan tatabahasa dengan betul untuk mengalahkan Penyihir Kekeliruan. Hati-hati dengan nyawa anda!
+        </p>
+    </div>
+
+    <script>
+        const questions = [
+            { level: 1, topic: 'Pronouns', narrative: 'Anda tiba di Gerbang Utama Syntaxia. Seorang pengawal menghalang jalan anda.', question: 'Pengawal: "I saw a lady near the forest. ___ was carrying a golden map."', options: ['She', 'Her', 'Hers'], answer: 'She', note: 'Gunakan "She" sebagai subjek ayat untuk merujuk kepada perempuan.' },
+            { level: 2, topic: 'Subject-Verb Agreement', narrative: 'Di pasar, seorang pedagang sedang mengira buah epal yang dicuri oleh monyet sakti.', question: 'Pedagang: "The monkey ___ my apples every single day!"', options: ['steal', 'steals', 'stealing'], answer: 'steals', note: 'Untuk subjek tunggal (The monkey), tambah "s" pada kata kerja dalam Present Tense.' },
+            { level: 3, topic: 'Prepositions', narrative: 'Anda sampai ke jambatan gantung. Anda perlu meletakkan azimat di tempat yang betul.', question: 'Ukiran: "Place the amulet ___ the stone pedestal to cross."', options: ['at', 'in', 'on'], answer: 'on', note: '"On" digunakan untuk menunjukkan sesuatu di atas permukaan.' },
+            { level: 4, topic: 'Past Tense', narrative: 'Hutan Larangan sangat gelap. Anda terjumpa catatan lama milik Wira terdahulu.', question: 'Catatan: "Last night, I ___ a giant dragon in this cave."', options: ['see', 'saw', 'seen'], answer: 'saw', note: '"Saw" adalah bentuk lampau bagi "see" (Past Tense).' },
+            { level: 5, topic: 'Possessive Adjectives', narrative: 'Akhirnya, anda berhadapan dengan Penyihir Kekeliruan di Menara Tatabahasa!', question: 'Penyihir: "You cannot defeat me! ___ magic is too weak!"', options: ['You', 'Your', 'Yours'], answer: 'Your', note: '"Your" menunjukkan kepunyaan sebelum kata nama (magic).' }
+        ];
+
+        let state = {
+            gameState: 'intro',
+            hearts: 3,
+            score: 0,
+            currentLevel: 1,
+            feedback: { isCorrect: false, message: '', note: '' }
+        };
+
+        function render() {
+            const mainCard = document.getElementById('main-card');
+            const levelDisplay = document.getElementById('level-display');
+            const scoreDisplay = document.getElementById('score-display');
+            const heartsContainer = document.getElementById('hearts-container');
+
+            // Update Status Bar
+            levelDisplay.innerText = `Level ${state.currentLevel}`;
+            scoreDisplay.innerText = `${state.score} Markah`;
+            heartsContainer.innerHTML = '';
+            for(let i=0; i<3; i++) {
+                const heart = document.createElement('i');
+                heart.setAttribute('data-lucide', 'heart');
+                heart.className = `w-6 h-6 ${i < state.hearts ? 'fill-red-500 text-red-500' : 'text-slate-600'}`;
+                heartsContainer.appendChild(heart);
+            }
+
+            // Render Content based on State
+            let html = '';
+            if (state.gameState === 'intro') {
+                html = `
+                    <div class="p-8 flex flex-col items-center text-center space-y-6 fade-in">
+                        <i data-lucide="swords" class="w-16 h-16 text-blue-500"></i>
+                        <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">THE GRAMMAR QUEST</h1>
+                        <p class="text-slate-300">Dunia Syntaxia dalam bahaya! Hanya seorang Wira yang mahir Bahasa Inggeris mampu mengembalikan keamanan.</p>
+                        <button onclick="startGame()" class="px-8 py-3 bg-blue-600 hover:bg-blue-500 rounded-full font-bold transition-all transform hover:scale-105 active:scale-95 shadow-lg">MULAKAN PENGEMBARAAN</button>
+                    </div>`;
+            } 
+            else if (state.gameState === 'playing') {
+                const q = questions[state.currentLevel - 1];
+                html = `
+                    <div class="p-8 space-y-6 fade-in">
+                        <div class="bg-slate-700/50 p-4 rounded-lg border-l-4 border-blue-500 italic text-slate-300">"${q.narrative}"</div>
+                        <div class="text-xl font-medium">${q.question}</div>
+                        <div class="grid grid-cols-1 gap-3">
+                            ${q.options.map(opt => `
+                                <button onclick="handleAnswer('${opt}')" class="w-full p-4 bg-slate-700 hover:bg-slate-600 rounded-xl text-left border border-slate-600 transition-colors font-semibold">${opt}</button>
+                            `).join('')}
+                        </div>
+                    </div>`;
+            }
+            else if (state.gameState === 'feedback') {
+                html = `
+                    <div class="p-8 flex flex-col items-center text-center space-y-6 fade-in">
+                        ${state.feedback.isCorrect ? 
+                            `<div class="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center"><i data-lucide="trophy" class="w-10 h-10 text-emerald-400"></i></div>
+                             <h2 class="text-2xl font-bold text-emerald-400">Tahniah!</h2>
+                             <p class="text-slate-300">${state.feedback.message}</p>
+                             <div class="text-xl text-yellow-400 font-bold">+10 MARKAH</div>` :
+                            `<div class="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center"><i data-lucide="shield-alert" class="w-10 h-10 text-red-400"></i></div>
+                             <h2 class="text-2xl font-bold text-red-400">Gagal!</h2>
+                             <p class="text-slate-300">${state.feedback.message}</p>
+                             <div class="bg-slate-700 p-4 rounded-lg w-full text-sm text-left">
+                                <span class="font-bold text-blue-400 uppercase">Nota:</span>
+                                <p class="mt-1 text-slate-200">${state.feedback.note}</p>
+                             </div>`
+                        }
+                        <button onclick="nextStep()" class="w-full py-4 rounded-xl font-bold transition-all shadow-lg ${state.feedback.isCorrect ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-600 hover:bg-slate-500'}">
+                            ${state.feedback.isCorrect ? 'TERUSKAN MISI' : 'CUBA LAGI'}
+                        </button>
+                    </div>`;
+            }
+            else if (state.gameState === 'gameover' || state.gameState === 'win') {
+                const isWin = state.gameState === 'win';
+                html = `
+                    <div class="p-8 flex flex-col items-center text-center space-y-6 fade-in">
+                        <i data-lucide="${isWin ? 'trophy' : 'shield-alert'}" class="w-20 h-20 ${isWin ? 'text-yellow-400' : 'text-red-500'}"></i>
+                        <h2 class="text-3xl font-bold ${isWin ? 'text-emerald-400' : 'text-red-500'}">${isWin ? 'TAHNIAH, WIRA!' : 'TAMAT PERMAINAN'}</h2>
+                        <p class="text-slate-300 italic">${isWin ? '"Syntaxia kini aman dan teratur!"' : '"Ilmu tatabahasa anda tidak cukup kuat kali ini..."'}</p>
+                        <div class="bg-slate-700/50 p-6 rounded-xl w-full border border-slate-600">
+                            <div class="text-slate-400 text-sm uppercase">Skor Akhir</div>
+                            <div class="text-5xl font-black text-yellow-400">${state.score}</div>
+                        </div>
+                        <button onclick="resetGame()" class="flex items-center gap-2 px-8 py-3 ${isWin ? 'bg-emerald-600' : 'bg-blue-600'} rounded-full font-bold transition-all">MAIN LAGI</button>
+                    </div>`;
+            }
+
+            mainCard.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        // Logic Functions
+        window.startGame = () => { state.gameState = 'playing'; render(); };
+        
+        window.handleAnswer = (selected) => {
+            const q = questions[state.currentLevel - 1];
+            if (selected === q.answer) {
+                state.score += 10;
+                state.feedback = { isCorrect: true, message: 'Jawapan Tepat! Anda berjaya menangkis serangan.' };
+            } else {
+                state.hearts -= 1;
+                state.feedback = { isCorrect: false, message: 'Aduh! Serangan anda tersasar.', note: q.note };
+                if (state.hearts <= 0) {
+                    setTimeout(() => { state.gameState = 'gameover'; render(); }, 1500);
+                    state.gameState = 'feedback'; render();
+                    return;
+                }
+            }
+            state.gameState = 'feedback';
+            render();
+        };
+
+        window.nextStep = () => {
+            if (state.feedback.isCorrect) {
+                if (state.currentLevel < questions.length) {
+                    state.currentLevel++;
+                    state.gameState = 'playing';
+                } else {
+                    state.gameState = 'win';
+                }
+            } else {
+                state.gameState = 'playing';
+            }
+            render();
+        };
+
+        window.resetGame = () => {
+            state = { gameState: 'intro', hearts: 3, score: 0, currentLevel: 1, feedback: {} };
+            render();
+        };
+
+        // Initial Render
+        render();
+    </script>
+</body>
+</html>
